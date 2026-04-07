@@ -57,7 +57,7 @@ jobs:
         sudo apt-get update && sudo apt-get install -y jq
         
         # Fetch SonarQube measures
-        response=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_HOST_URL/api/measures/component?component=Javacoverage01&metricKeys=ncloc,new_lines,code_smells,new_code_smells,vulnerabilities,new_vulnerabilities,security_hotspots,new_security_hotspots,coverage,new_coverage")
+        response=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_HOST_URL/api/measures/component?component=Javacoverage01&metricKeys=ncloc,new_lines,code_smells,new_code_smells,vulnerabilities,new_vulnerabilities,security_hotspots,new_security_hotspots,coverage,new_coverage,blocker_violations,critical_violations,major_violations,minor_violations,info_violations")
         
         # Parse and display in table format
         echo "| Metric | Overall Code | New Code |"
@@ -92,3 +92,32 @@ jobs:
         echo "| Code Coverage | ${coverage}% | ${new_coverage}% |" >> "$GITHUB_STEP_SUMMARY"
         echo "" >> "$GITHUB_STEP_SUMMARY"
         echo "**SonarQube dashboard:** [$SONAR_HOST_URL/dashboard?id=Javacoverage01]($SONAR_HOST_URL/dashboard?id=Javacoverage01)" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Extract Vulnerability Severities
+      shell: bash
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      run: |
+        # Install jq for JSON parsing
+        sudo apt-get update && sudo apt-get install -y jq
+        
+        # Fetch SonarQube measures for vulnerability severities
+        response=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_HOST_URL/api/measures/component?component=Javacoverage01&metricKeys=blocker_violations,critical_violations,major_violations,minor_violations,info_violations")
+        
+        # Extract severity values
+        blocker=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "blocker_violations") | .value // "0"')
+        critical=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "critical_violations") | .value // "0"')
+        major=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "major_violations") | .value // "0"')
+        minor=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "minor_violations") | .value // "0"')
+        info=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "info_violations") | .value // "0"')
+        
+        # Add vulnerability severity breakdown to GitHub Actions summary
+        echo "## Vulnerability Severity Breakdown" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Severity | Count |" >> "$GITHUB_STEP_SUMMARY"
+        echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🔴 Blocker | $blocker |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🟠 Critical | $critical |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🟡 Major | $major |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🔵 Minor | $minor |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| ⚪ Info | $info |" >> "$GITHUB_STEP_SUMMARY"
