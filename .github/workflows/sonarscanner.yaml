@@ -65,15 +65,15 @@ jobs:
         
         # Extract values
         ncloc=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "ncloc") | .value // "N/A"')
-        new_lines=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "new_lines") | .value, .periods[0].value) // "N/A"')
-        code_smells=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "code_smells") | .value) // "N/A"')
-        new_code_smells=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "new_code_smells") | .value, .periods[0].value) // "N/A"')
-        vulnerabilities=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "vulnerabilities") | .value) // "N/A"')
-        new_vulnerabilities=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "new_vulnerabilities") | .value, .periods[0].value) // "N/A"')
-        security_hotspots=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "security_hotspots") | .value) // "N/A"')
-        new_security_hotspots=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "new_security_hotspots") | .value, .periods[0].value) // "N/A"')
-        coverage=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "coverage") | .value) // "N/A"')
-        new_coverage=$(echo "$response" | jq -r 'first(.component.measures[] | select(.metric == "new_coverage") | .value, .periods[0].value) // "N/A"')
+        new_lines=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_lines") | (.value // .periods[0].value) // "N/A"')
+        code_smells=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "code_smells") | .value // "N/A"')
+        new_code_smells=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_code_smells") | (.value // .periods[0].value) // "N/A"')
+        vulnerabilities=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "vulnerabilities") | .value // "N/A"')
+        new_vulnerabilities=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_vulnerabilities") | (.value // .periods[0].value) // "N/A"')
+        security_hotspots=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "security_hotspots") | .value // "N/A"')
+        new_security_hotspots=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_security_hotspots") | (.value // .periods[0].value) // "N/A"')
+        coverage=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "coverage") | .value // "N/A"')
+        new_coverage=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_coverage") | (.value // .periods[0].value) // "N/A"')
         
         echo "| Lines of Code | $ncloc | $new_lines |"
         echo "| Code Smells | $code_smells | $new_code_smells |"
