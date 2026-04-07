@@ -21,7 +21,39 @@ Use the following Maven command to run tests, generate coverage data, and submit
 
 On Windows, use `mvnw.cmd` instead of `./mvnw`.
 
+Alternatively, this project includes a GitHub Actions workflow (`.github/workflows/sonarscanner.yaml`) that automatically runs SonarQube analysis on pushes and pull requests to `main` and `develop` branches.
+
+To use the workflow, set the following secrets in your GitHub repository:
+- `SONAR_TOKEN`: Your SonarQube authentication token
+- `SONAR_HOST_URL`: Your SonarQube server URL (e.g., `http://localhost:9000/` or `https://sonarcloud.io`)
+
+## SonarQube Report Summary
+
+| Metric | Overall Code | New Code |
+|--------|--------------|----------|
+| Code Smells | 15 | 2 |
+| Vulnerabilities | 3 | 0 |
+| Security Hotspots | 8 | 1 |
+| Code Coverage | 79% | 85% |
+
+*Note: This table shows sample data. Actual values will be populated after running the SonarQube analysis. You can extract this data from the SonarQube portal dashboard or via the API endpoint: `/api/measures/component?component=Javacoverage01&metricKeys=ncloc,new_lines,code_smells,new_code_smells,vulnerabilities,new_vulnerabilities,security_hotspots,new_security_hotspots,coverage,new_coverage`*
+
 This project now includes explicit security-vulnerability patterns that should be detected by SonarQube during analysis.
+
+### Where the hotspots live
+- `src/main/java/JavaCodeCoverage/SecurityHotspotExamples.java`
+- `src/main/java/JavaCodeCoverage/VulnerableService.java`
+- `src/main/java/JavaCodeCoverage/SecurityUtils.java`
+
+These classes include Sonar-detectable hotspots such as:
+- hardcoded credentials and API keys
+- insecure SQL string concatenation
+- unsafe command execution
+- path traversal file access
+- insecure SSL/TLS trust manager
+- insecure deserialization
+- weak hashing
+- predictable random number generation
 
 > Note: the previous command had an incorrect case/property name: use `-Dsonar.qualitygate.wait=true` (not `-DSonar.quality.gate.wait=true`).
 
