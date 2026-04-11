@@ -20,7 +20,6 @@ Use the following Maven command to run tests, generate coverage data, and submit
 ```
 
 On Windows, use `mvnw.cmd` instead of `./mvnw`.
-
 Alternatively, this project includes a GitHub Actions workflow (`.github/workflows/sonarscanner.yaml`) that automatically runs SonarQube analysis on pushes and pull requests to `main` and `develop` branches.
 
 To use the workflow, set the following secrets in your GitHub repository:
@@ -75,4 +74,3 @@ Use Maven to execute the test suite:
 ```bash
 mvn test
 ```
- 
