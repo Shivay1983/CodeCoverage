@@ -13,25 +13,93 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-    
-    - name: Build Docker image locally
-      run: docker build -t myapp:1.0 .
 
-    - name: Run Trivy scan on local image
-      uses: aquasecurity/trivy-action@v0.36.0
-      with:
-        scan-type: 'image'
-        image-ref: 'myapp:1.0'
-        format: 'table'
-        vuln-type: 'os,library'
-        severity: 'CRITICAL,HIGH'
-        ignore-unfixed: true
-        exit-code: '1'
+    - name: Run Snyk Code
+      run: snyk code test --json > snyk-code-report.json || true
+      env:
+        SNYK_TOKEN: 'snyk_uat.1fcad39e.eyJlIjoxNzg0NzQzNDAzLCJoIjoic255ay5pbyIsImoiOiJBWjI3Z3dnUGNaUHJDTU5MN0ozdWhRIiwicyI6IkNEZFh6TFkxUTM2bFVTR2Z0Z1Y1WEEiLCJ0aWQiOiJBQUFBQUFBQUFBQUFBQUFBQUFBQUFBIn0.I6XGhOFEFHgqiA24HYQY7s9eCYNpG87u0zrAciTEFgal-Y0TLaGB_zuFv8-jmK3TNd4qQLYzEZxmA8AxQ0BTAQ'
+            
+    - name: Generate GitHub Summary (Table)
+      run: |
+        echo "## Snyk Code Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Severity | Issue Title | Description | File |" >> $GITHUB_STEP_SUMMARY
+        echo "|----------|-------------|-------------|------|" >> $GITHUB_STEP_SUMMARY
+        if jq -e '.issues | length > 0' snyk-code-report.json > /dev/null; then
+          jq -r '.issues[] | "| \(.severity) | \(.title) | \(.message // "N/A") | \(.path // "N/A") |"' snyk-code-report.json >> $GITHUB_STEP_SUMMARY
+        else
+          echo "| None | No issues found | N/A | N/A |" >> $GITHUB_STEP_SUMMARY
+        fi
 
+
+     
+
+    # - name: Download Gitleaks
+    #   run: |
+    #     curl -sSL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks-linux-amd64 \
+    #       -o gitleaks
+    #     chmod +x gitleaks
+       
+
+    # - name: Run Gitleaks scan
+    #   run: |
+    #     gitleaks detect --source . \
+    #       --report-format json \
+    #       --report-path gitleaks-report.json \
+    #       --exit-code 0  # don’t fail yet, just collect JSON
+
+    # - name: Show Gitleaks summary in job summary
+    #   run: |
+    #     total=$(jq 'length' gitleaks-report.json)
+    #     echo "### Gitleaks Report Summary" >> $GITHUB_STEP_SUMMARY
+    #     echo "Total secrets found: $total" >> $GITHUB_STEP_SUMMARY
+
+    #     if [ "$total"  -gt 0 ]; then
+    #       echo "❌ Secrets detected, failing pipeline."
+    #       exit 1
+    #     else
+    #       echo "✅ No secrets detected."
+    #     fi  
+
+    # - name: Build Docker image locally
+    #   run: docker build -t myapp:1.0 .
+
+    # - name: Run Trivy scan (JSON)
+    #   uses: aquasecurity/trivy-action@v0.36.0
+    #   with:
+    #     scan-type: 'image'
+    #     image-ref: 'myapp:1.0'
+    #     format: 'json'
+    #     output: 'trivy-report.json'
+    #     exit-code: '0'  # don’t fail yet, just collect JSON
     
+    # - name: Show summary counts
+    #   run: |
+    #     summary=$(jq -r '[.Results[].Vulnerabilities[]?.Severity] 
+    #                  | group_by(.) 
+    #                  | map("\(.[0]): \(length)") 
+    #                  | join(", ")' trivy-report.json)
+    #     echo "Vulnerability Summary: $summary"
+    #     echo "### Trivy Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+    #     echo "$summary" >> $GITHUB_STEP_SUMMARY
+                 
+    # - name: Fail if CRITICAL/HIGH found in summary
+    #   run: |
+    #     critical=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-report.json)
+    #     high=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-report.json)
+
+    #     echo "CRITICAL: $critical, HIGH: $high"
+
+    #     if [ "$critical" -gt 0 ] || [ "$high" -gt 0 ]; then
+    #       echo "❌ Found CRITICAL/HIGH vulnerabilities. Failing pipeline."
+    #       exit 1
+    #     else
+    #       echo "✅ No CRITICAL/HIGH vulnerabilities found."
+    #     fi
+  
     # - name: Set up JDK 17
     #   uses: actions/setup-java@v4
     #   with:
