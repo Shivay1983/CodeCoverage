@@ -75,4 +75,20 @@ Use Maven to execute the test suite:
 ```bash
 mvn test
 ```
+
+## Docker image
+
+Build the Docker image from the project root:
+
+```bash
+docker build -t javacoverage-app .
+```
+
+Run the image to execute the Maven test suite inside the container:
+
+```bash
+docker run --rm javacoverage-app
+```
+
+This container image is configured to build the project and run tests in a Maven environment.
  
