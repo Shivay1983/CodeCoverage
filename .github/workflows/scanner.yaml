@@ -1,0 +1,123 @@
+name: SonarQube Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  sonar-analysis:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+    # - name: Set up JDK 17
+    #   uses: actions/setup-java@v4
+    #   with:
+    #     java-version: '17'
+    #     distribution: 'temurin'
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+
+    - name: Run Maven tests and SonarQube analysis
+      shell: bash
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      run: |
+        mvn clean verify sonar:sonar \
+          -Dsonar.projectKey=Javacoverage01 \
+          -Dsonar.projectName=Javacoverage01 \
+          -Dsonar.host.url=$SONAR_HOST_URL \
+          -Dsonar.login=$SONAR_TOKEN \
+          -Dsonar.qualitygate.wait=false \
+          -Dsonar.scm.provider=git \
+          -Dsonar.junit.reportPaths=target/surefire-reports \
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/jacoco-report/jacoco.xml \
+          -Dsonar.exclusions=''
+
+    - name: Extract SonarQube Report Details
+      shell: bash
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      run: |
+        # Install jq for JSON parsing
+        sudo apt-get update && sudo apt-get install -y jq
+        
+        # Fetch SonarQube measures
+        response=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_HOST_URL/api/measures/component?component=Javacoverage01&metricKeys=ncloc,new_lines,code_smells,new_code_smells,vulnerabilities,new_vulnerabilities,security_hotspots,new_security_hotspots,coverage,new_coverage,blocker_violations,critical_violations,major_violations,minor_violations,info_violations")
+        
+        # Parse and display in table format
+        echo "| Metric | Overall Code | New Code |"
+        echo "|--------|--------------|----------|"
+        
+        # Extract values
+        ncloc=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "ncloc") | .value // "N/A"')
+        new_lines=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_lines") | (.value // .periods[0].value) // "N/A"')
+        code_smells=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "code_smells") | .value // "N/A"')
+        new_code_smells=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_code_smells") | (.value // .periods[0].value) // "N/A"')
+        vulnerabilities=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "vulnerabilities") | .value // "N/A"')
+        new_vulnerabilities=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_vulnerabilities") | (.value // .periods[0].value) // "N/A"')
+        security_hotspots=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "security_hotspots") | .value // "N/A"')
+        new_security_hotspots=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_security_hotspots") | (.value // .periods[0].value) // "N/A"')
+        coverage=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "coverage") | .value // "N/A"')
+        new_coverage=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "new_coverage") | (.value // .periods[0].value) // "N/A"')
+        
+        echo "| Lines of Code | $ncloc | $new_lines |"
+        echo "| Code Smells | $code_smells | $new_code_smells |"
+        echo "| Vulnerabilities | $vulnerabilities | $new_vulnerabilities |"
+        echo "| Security Hotspots | $security_hotspots | $new_security_hotspots |"
+        echo "| Code Coverage | ${coverage}% | ${new_coverage}% |"
+
+        # Add results to GitHub Actions summary
+        echo "## SonarQube Report Summary" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Metric | Overall Code | New Code |" >> "$GITHUB_STEP_SUMMARY"
+        echo "|--------|--------------|----------|" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Lines of Code | $ncloc | $new_lines |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Code Smells | $code_smells | $new_code_smells |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Vulnerabilities | $vulnerabilities | $new_vulnerabilities |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Security Hotspots | $security_hotspots | $new_security_hotspots |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Code Coverage | ${coverage}% | ${new_coverage}% |" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "**SonarQube dashboard:** [$SONAR_HOST_URL/dashboard?id=Javacoverage01]($SONAR_HOST_URL/dashboard?id=Javacoverage01)" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Extract Vulnerability Severities
+      shell: bash
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      run: |
+        # Install jq for JSON parsing
+        sudo apt-get update && sudo apt-get install -y jq
+        
+        # Fetch SonarQube measures for vulnerability severities
+        response=$(curl -s -u "$SONAR_TOKEN:" "$SONAR_HOST_URL/api/measures/component?component=Javacoverage01&metricKeys=blocker_violations,critical_violations,major_violations,minor_violations,info_violations")
+        
+        # Extract severity values
+        blocker=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "blocker_violations") | .value // "0"')
+        critical=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "critical_violations") | .value // "0"')
+        major=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "major_violations") | .value // "0"')
+        minor=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "minor_violations") | .value // "0"')
+        info=$(echo "$response" | jq -r '.component.measures[] | select(.metric == "info_violations") | .value // "0"')
+        
+        # Add vulnerability severity breakdown to GitHub Actions summary
+        echo "## Vulnerability Severity Breakdown" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Severity | Count |" >> "$GITHUB_STEP_SUMMARY"
+        echo "|----------|-------|" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🔴 Blocker | $blocker |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🟠 Critical | $critical |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🟡 Major | $major |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| 🔵 Minor | $minor |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| ⚪ Info | $info |" >> "$GITHUB_STEP_SUMMARY"
