@@ -18,7 +18,7 @@ jobs:
         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
     - name: Run Snyk Code
-      run: snyk test --json > snyk-code-report.json 
+      run: snyk test -d --json > snyk-code-report.json 
       continue-on-error: true
   
     - name: Generate GitHub Summary (Table)
