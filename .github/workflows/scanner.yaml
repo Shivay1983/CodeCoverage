@@ -18,7 +18,7 @@ jobs:
         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
     - name: Run Snyk Code
-      run: snyk code test --json > snyk-code-report.json || true
+      run: snyk  test --json > snyk-code-report.json || true
       env:
         SNYK_TOKEN: 'snyk_uat.1fcad39e.eyJlIjoxNzg0NzQzNDAzLCJoIjoic255ay5pbyIsImoiOiJBWjI3Z3dnUGNaUHJDTU5MN0ozdWhRIiwicyI6IkNEZFh6TFkxUTM2bFVTR2Z0Z1Y1WEEiLCJ0aWQiOiJBQUFBQUFBQUFBQUFBQUFBQUFBQUFBIn0.I6XGhOFEFHgqiA24HYQY7s9eCYNpG87u0zrAciTEFgal-Y0TLaGB_zuFv8-jmK3TNd4qQLYzEZxmA8AxQ0BTAQ'
             
