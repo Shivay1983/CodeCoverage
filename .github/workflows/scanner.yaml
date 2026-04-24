@@ -49,6 +49,7 @@ jobs:
           --exit-code 0  # don’t fail yet, just collect JSON
 
     - name: Show Gitleaks summary in job summary
+      continue-on-error: true
       run: |
         total=$(jq 'length' gitleaks-report.json)
         echo "### Gitleaks Report Summary" >> $GITHUB_STEP_SUMMARY
