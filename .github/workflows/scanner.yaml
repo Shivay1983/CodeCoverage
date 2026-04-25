@@ -30,19 +30,13 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Run Snyk Code
-      run: snyk test -d --json > snyk-code-report.json || true
-      env:
-        SNYK_TOKEN: 'snyk_uat.1fcad39e.eyJlIjoxNzg0NzQzNDAzLCJoIjoic255ay5pbyIsImoiOiJBWjI3Z3dnUGNaUHJDTU5MN0ozdWhRIiwicyI6IkNEZFh6TFkxUTM2bFVTR2Z0Z1Y1WEEiLCJ0aWQiOiJBQUFBQUFBQUFBQUFBQUFBQUFBQUFBIn0.I6XGhOFEFHgqiA24HYQY7s9eCYNpG87u0zrAciTEFgal-Y0TLaGB_zuFv8-jmK3TNd4qQLYzEZxmA8AxQ0BTAQ'
-            
-    - name: Generate GitHub Summary (Table)
+    - name: Run Trivy FS Scan
+      run: trivy fs --scanners vuln --format json -o trivy-report.json .
+          
+    - name: Generate Trivy Summary
       run: |
-        echo "## Snyk Code Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "## Trivy Vulnerability Report" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Severity | Issue Title | Description | File |" >> $GITHUB_STEP_SUMMARY
-        echo "|----------|-------------|-------------|------|" >> $GITHUB_STEP_SUMMARY
-        if jq -e '.issues | length > 0' snyk-code-report.json > /dev/null; then
-          jq -r '.issues[] | "| \(.severity) | \(.title) | \(.message // "N/A") | \(.path // "N/A") |"' snyk-code-report.json >> $GITHUB_STEP_SUMMARY
-        else
-          echo "| None | No issues found | N/A | N/A |" >> $GITHUB_STEP_SUMMARY
-        fi
+        echo "| Target | Severity | Vulnerability |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|----------|---------------|" >> $GITHUB_STEP_SUMMARY
+        cat trivy-report.json | jq -r '.Results[].Vulnerabilities[]? | "| \(.PkgName) | \(.Severity) | \(.VulnerabilityID) |"' >> $GITHUB_STEP_SUMMARY
