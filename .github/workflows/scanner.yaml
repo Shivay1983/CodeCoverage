@@ -1,4 +1,4 @@
- name: SonarQube Analysis
+name: SonarQube Analysis
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
 
     - name: Build project
       run: mvn -B clean compile
-      
+
     - name: Run Trivy FS Scan (Vulnerability scan)
       run: trivy fs --scanners vuln --format json -o trivy-report.json .
           
