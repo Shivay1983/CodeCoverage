@@ -1,4 +1,4 @@
-name: SonarQube Analysis
+ name: SonarQube Analysis
 
 on:
   push:
@@ -16,6 +16,19 @@ jobs:
       uses: actions/checkout@v6
       with:
         fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+        
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Cache Maven packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
 
     # - name: Run Snyk Code
     #   run: snyk test -d --json > snyk-code-report.json || true
@@ -62,54 +75,8 @@ jobs:
           echo "✅ No secrets detected."
         fi  
 
-    - name: Build Docker image locally
-      run: docker build -t myapp:1.0 .
-
-    - name: Run Trivy scan (JSON)
-      uses: aquasecurity/trivy-action@v0.36.0
-      with:
-        scan-type: 'image'
-        image-ref: 'myapp:1.0'
-        format: 'json'
-        output: 'trivy-report.json'
-        exit-code: '0'  # don’t fail yet, just collect JSON
     
-    - name: Show summary counts
-      run: |
-        summary=$(jq -r '[.Results[].Vulnerabilities[]?.Severity] 
-                     | group_by(.) 
-                     | map("\(.[0]): \(length)") 
-                     | join(", ")' trivy-report.json)
-        echo "Vulnerability Summary: $summary"
-        echo "### Trivy Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
-        echo "$summary" >> $GITHUB_STEP_SUMMARY
-                 
-    - name: Fail if CRITICAL/HIGH found in summary
-      run: |
-        critical=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-report.json)
-        high=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-report.json)
 
-        echo "CRITICAL: $critical, HIGH: $high"
-
-        if [ "$critical" -gt 0 ] || [ "$high" -gt 0 ]; then
-          echo "❌ Found CRITICAL/HIGH vulnerabilities. Failing pipeline."
-          exit 1
-        else
-          echo "✅ No CRITICAL/HIGH vulnerabilities found."
-        fi
-  
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    - name: Cache Maven packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
 
     - name: Run Maven tests and SonarQube analysis
       shell: bash
@@ -202,3 +169,40 @@ jobs:
         echo "| 🟡 Major | $major |" >> "$GITHUB_STEP_SUMMARY"
         echo "| 🔵 Minor | $minor |" >> "$GITHUB_STEP_SUMMARY"
         echo "| ⚪ Info | $info |" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Build Docker image locally
+      run: docker build -t myapp:1.0 .
+
+    - name: Run Trivy scan (JSON)
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        scan-type: 'image'
+        image-ref: 'myapp:1.0'
+        format: 'json'
+        output: 'trivy-report.json'
+        exit-code: '0'  # don’t fail yet, just collect JSON
+    
+    - name: Show summary counts
+      run: |
+        summary=$(jq -r '[.Results[].Vulnerabilities[]?.Severity] 
+                    | group_by(.) 
+                    | map("\(.[0]): \(length)") 
+                    | join(", ")' trivy-report.json)
+        echo "Vulnerability Summary: $summary"
+        echo "### Trivy Vulnerability Summary" >> $GITHUB_STEP_SUMMARY
+        echo "$summary" >> $GITHUB_STEP_SUMMARY
+                
+    - name: Fail if CRITICAL/HIGH found in summary
+      run: |
+        critical=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-report.json)
+        high=$(jq '[.Results[].Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-report.json)
+
+        echo "CRITICAL: $critical, HIGH: $high"
+
+        if [ "$critical" -gt 0 ] || [ "$high" -gt 0 ]; then
+          echo "❌ Found CRITICAL/HIGH vulnerabilities. Failing pipeline."
+          exit 1
+        else
+          echo "✅ No CRITICAL/HIGH vulnerabilities found."
+        fi
+  
