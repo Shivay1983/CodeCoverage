@@ -5,7 +5,6 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class VulnerableService {
-
     private Connection connection;
 
     public VulnerableService(Connection connection) {
@@ -18,7 +17,6 @@ public class VulnerableService {
         ResultSet rs = stmt.executeQuery(
             "SELECT * FROM users WHERE id = '" + userInput + "'"
         );
-
         // process rs...
     }
 }
